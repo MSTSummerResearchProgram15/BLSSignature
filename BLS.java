@@ -33,12 +33,26 @@ public class BLS {
         File dir = new File("output");
         dir.mkdir();
 
+        String saveFile = "splitFile";
+        int numberOfFiles = 0;
         try {
             File path = path("message.txt");
-            System.out.println(splitFile(path, 32, "splitFile"));
+            System.out.println("number of files created:");
+            System.out.println(numberOfFiles = splitFile(path, 32, saveFile));
         } catch(IOException ioe){
             ioe.printStackTrace();
         }
+
+        String folderPath = "output";
+        String originalName = saveFile;
+        try {
+            signFiles(folderPath, originalName, numberOfFiles, privateKey, pairing);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+
+
+
 
 
 
@@ -175,6 +189,28 @@ public class BLS {
         */
     }
 
+    // takes a file name and number of files of that name(with iterator concatenated) and generates signatures for all of them
+    // original file name is name of file without extensions
+    public static void signFiles(String folderPath, String OriginalfileName,int numberOfFiles, Element privateKey, Pairing pairing) throws IOException{
+        String filePath = folderPath.concat("\\").concat(OriginalfileName);
+        String temp;
+        for (int i = 1; i <= numberOfFiles; i++) {
+            temp = filePath.concat(Integer.toString(i)).concat(".txt");
+            byte[] messageBlock = readFile(temp);
+            Element signature = generateSignature(messageBlock, privateKey, pairing);
+            writeSignature(temp, signature);
+        }
+
+
+
+        //writeSignature(filePath, signature);
+    }
+
+    // takes a file path and generates signature with same file name but with .signature
+    public static void writeSignature(String filePath, Element signature) throws FileNotFoundException, IOException {
+        OutputStream os = new FileOutputStream(filePath.concat(".signature"));
+        os.write(signature.toBytes());
+    }
     // takes a string file path and creates File object
     public static File path(String filePath) throws IOException{
         File path = new File(filePath);
@@ -198,7 +234,7 @@ public class BLS {
                 return -1;
             }
         }
-        return numberOfFiles;
+        return (numberOfFiles - 1);
     }
     /*// splits byte array into multiple blocks of size blockSize(bytes)
     public static byte[][] splitArray(byte[] file, int blockSize){
@@ -221,18 +257,18 @@ public class BLS {
             blockIterator++;
         }
         return blocks;
-    }
+    }*/
 
-    // reads file into byte array
+    // reads file into byte array, don't use for 'large' files
     public static byte[] readFile(String filePath) throws IOException{
         byte[] file;
         Path path = Paths.get(filePath);
         file = Files.readAllBytes(path);
         return file;
-    }*/
+    }
 
     // verifies that the signature is valid, given the necessary inputs
-    public static boolean verifySignature(Element signature, Element sysParams, BigInteger message, Element publicKey, Pairing pairing){
+    public static boolean verifySignature(Element signature, Element sysParams, byte[] message, Element publicKey, Pairing pairing){
         Element map = mapValue(message, pairing);
         Element temp1 = pairing.pairing(signature, sysParams);
         Element temp2 = pairing.pairing(map,publicKey);
@@ -240,15 +276,15 @@ public class BLS {
     }
 
     // generates the signature using a value and the private key (uses hash of value)
-    public static Element generateSignature(BigInteger value, Element privateKey, Pairing pairing) {
+    public static Element generateSignature(byte[] message, Element privateKey, Pairing pairing) {
         Element sig;
-        Element map = mapValue(value, pairing);
+        Element map = mapValue(message, pairing);
         sig = map.powZn(privateKey);
         return sig;
     }
 
     // takes the value, and maps the hash of the value
-    public static Element mapValue(BigInteger value, Pairing pairing){
+    public static Element mapValue(byte[] value, Pairing pairing){
         Element map;
         byte[] hash = hash(value);
         map = pairing.getG1().newElement().setFromHash(hash, 0, hash.length);
@@ -256,11 +292,10 @@ public class BLS {
     }
 
     // computes hash of value with SHA256
-    public static byte[] hash(BigInteger value){
+    public static byte[] hash(byte[] value){
         byte[] hash;
-        byte[] temp = value.toByteArray();
         MessageDigest md = new JDKMessageDigest.SHA256();
-        hash = md.digest(temp);
+        hash = md.digest(value);
         return hash;
     }
 }
