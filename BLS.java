@@ -2,8 +2,7 @@
  * Created by Dylan on 6/16/2015.
  *
  *
- * Azhar-
- * see line 50
+ *
  */
 
 
@@ -12,7 +11,11 @@ import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 import org.bouncycastle.jce.provider.JDKMessageDigest;
 
+import java.io.*;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
@@ -26,7 +29,23 @@ public class BLS {
         Element privateKey = pairing.getZr().newRandomElement();        // secret/private key
         Element pK = g.powZn(privateKey);                               // public key
 
-        // set values: "messages"
+
+        File dir = new File("output");
+        dir.mkdir();
+
+        try {
+            File path = path("message.txt");
+            System.out.println(splitFile(path, 32, "splitFile"));
+        } catch(IOException ioe){
+            ioe.printStackTrace();
+        }
+
+
+
+
+
+
+        /*// set values: "messages"
         BigInteger m = new BigInteger("6");
         BigInteger n = new BigInteger("7");
         BigInteger c = m.add(n); // combined value
@@ -41,24 +60,38 @@ public class BLS {
             System.out.println("not valid");
         }
 
+        BigInteger message = new BigInteger("123");
+        Element signature = generateSignature(message, privateKey, pairing);
+        boolean valid = verifySignature(signature, g, message, pK, pairing);
+        if(valid){
+            System.out.println("Message verified");
+        }*/
+
+
+
+
+
+
+
+/*
         // begin recovery testing
         System.out.println("private key:");
         System.out.println(Arrays.toString(privateKey.toBytes()));
         System.out.println("");
         BigInteger testValue = new BigInteger("0");
         Element map = mapValue(testValue, pairing);
-        Element signature = map.powZn(privateKey); // How can they be equal!? *********************
+        Element signature1 = map.powZn(privateKey); // How can they be equal!? *********************
 
         System.out.println(Arrays.toString(map.toBytes()));
-        System.out.println(Arrays.toString(signature.toBytes()));
+        System.out.println(Arrays.toString(signature1.toBytes()));
 
         System.out.println(map.hashCode());
-        System.out.println(signature.hashCode());
+        System.out.println(signature1.hashCode());
 
         System.out.println(map);
-        System.out.println(signature);
+        System.out.println(signature1);
 
-        if (map.equals(signature))
+        if (map.equals(signature1))
         {
             System.out.println("they are equal");
         } else  {
@@ -68,19 +101,10 @@ public class BLS {
             System.out.println("they are equal");
         } else {
             System.out.println("they're not equal");
-        }
-
-
-
-
-
-
+        }*/
 
         /*
-            attempt to reverse signature process (?)
-
-            turns out that Sout(byteArray) gives you the pointer instead of the array. Or something like that anyway :|
-                use Arrays.toString(byteArray)
+            get random file and split into blocks, then sign each block, then add blocks (and multiply signatures), and verify homomorphism
 
 
 
@@ -151,15 +175,68 @@ public class BLS {
         */
     }
 
+    // takes a string file path and creates File object
+    public static File path(String filePath) throws IOException{
+        File path = new File(filePath);
+        return path;
+    }
+
+    // splits one file into multiple files of size blockSize(bytes) into \output folder, returns number of files, -1 if fail
+    public static int splitFile(File file, int blockSize, String saveName) throws FileNotFoundException {
+        int numberOfFiles = 1;
+        String PathName = "output\\".concat(saveName);
+        InputStream is = new FileInputStream(file);
+        byte[] temp = new byte[blockSize];
+        for (int i = 0; i < blockSize; i++) {
+            try {
+                is.read(temp);
+                OutputStream os = new FileOutputStream(PathName.concat(Integer.toString(numberOfFiles)).concat(".txt"));
+                numberOfFiles++;
+                os.write(temp);
+            } catch(Exception IOException){
+                IOException.printStackTrace();
+                return -1;
+            }
+        }
+        return numberOfFiles;
+    }
+    /*// splits byte array into multiple blocks of size blockSize(bytes)
+    public static byte[][] splitArray(byte[] file, int blockSize){
+        int arrayLength = file.length/blockSize;
+        if(file.length%blockSize != 0){
+            arrayLength++;
+        }
+        byte[][] blocks = new byte[arrayLength][blockSize];
+
+        int counter = file.length;
+        int iterator = 0;
+        int blockIterator = 0;
+        while(counter > 0){
+            for (int i = 0; i < blockSize; i++) {
+                if(counter == 0){break;}
+                blocks[blockIterator][i] = file[iterator];
+                iterator++;
+                counter--;
+            }
+            blockIterator++;
+        }
+        return blocks;
+    }
+
+    // reads file into byte array
+    public static byte[] readFile(String filePath) throws IOException{
+        byte[] file;
+        Path path = Paths.get(filePath);
+        file = Files.readAllBytes(path);
+        return file;
+    }*/
+
     // verifies that the signature is valid, given the necessary inputs
     public static boolean verifySignature(Element signature, Element sysParams, BigInteger message, Element publicKey, Pairing pairing){
         Element map = mapValue(message, pairing);
         Element temp1 = pairing.pairing(signature, sysParams);
         Element temp2 = pairing.pairing(map,publicKey);
-        if(temp1.equals(temp2)){
-            return true;
-        }
-        return false;
+        return temp1.equals(temp2);
     }
 
     // generates the signature using a value and the private key (uses hash of value)
