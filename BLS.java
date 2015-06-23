@@ -21,8 +21,10 @@ import java.util.Arrays;
 
 public class BLS {
 
+    public static final int BLOCK_SIZE = 64;
     public static void main(String args[]){
 
+        long startTime = System.currentTimeMillis();
         // setup pairing
         Pairing pairing = PairingFactory.getPairing("a.properties");    // curve parameters
         Element g = pairing.getG1().newRandomElement().getImmutable();  // system parameters
@@ -38,7 +40,7 @@ public class BLS {
         try {
             File path = path("message.txt");
             System.out.println("number of files created:");
-            System.out.println(numberOfFiles = splitFile(path, 32, saveFile));
+            System.out.println(numberOfFiles = splitFile(path, BLOCK_SIZE, saveFile));
         } catch(IOException ioe){
             ioe.printStackTrace();
         }
@@ -50,7 +52,21 @@ public class BLS {
         } catch (IOException e){
             e.printStackTrace();
         }
+        boolean success = false;
+        try{
+            success = verifyFiles(folderPath, originalName, numberOfFiles, g, pK, pairing);
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+        if(success){
+            System.out.println("successfully verified");
+        }else{
+            System.out.println("not verified");
+        }
 
+        System.out.println("\nms to run:");
+        System.out.println(System.currentTimeMillis()-startTime);
+        System.exit(0);
 
 
 
@@ -124,7 +140,6 @@ public class BLS {
 
         */
 
-        System.exit(0); // exit
         // collapsed code block (also commented out):
         /*//((new BigInteger(mHash)).multiply(new BigInteger(nHash))).toByteArray();
 
@@ -189,18 +204,47 @@ public class BLS {
         */
     }
 
+    // takes file name and number of files with that name(iterator concatenated) and verifies using .signature files in same directory
+    public static boolean verifyFiles(String folderPath, String originalFileName,
+                                   int numberOfFiles, Element sysParams,
+                                   Element publicKey, Pairing pairing )
+                                    throws IOException
+    {
+        String filePath = folderPath.concat("\\").concat(originalFileName);
+        String temp;
+        int successes = 0;
+        boolean allFilesGood = false;
+        for (int i = 1; i <= numberOfFiles; i++) {
+            temp = filePath.concat(Integer.toString(i)).concat(".txt");
+            byte[] message = readFile(temp);
+            temp = temp.concat(".signature");
+            byte[] sig = readFile(temp);
+            Element signature = pairing.getG1().newElementFromBytes(sig);
+            boolean v = verifySignature(signature, sysParams, message, publicKey, pairing);
+            if(v){successes++;}
+        }
+        if(successes == numberOfFiles){
+            allFilesGood = true;
+        }
+
+        return allFilesGood;
+    }
+
     // takes a file name and number of files of that name(with iterator concatenated) and generates signatures for all of them
     // original file name is name of file without extensions
-    public static void signFiles(String folderPath, String OriginalfileName,int numberOfFiles, Element privateKey, Pairing pairing) throws IOException{
-        String filePath = folderPath.concat("\\").concat(OriginalfileName);
+    public static void signFiles(String folderPath, String originalFileName,int numberOfFiles, Element privateKey, Pairing pairing) throws IOException{
+        String filePath = folderPath.concat("\\").concat(originalFileName);
         String temp;
-        for (int i = 1; i <= numberOfFiles; i++) {
+        for (int i = 1; i < numberOfFiles; i++) {
             temp = filePath.concat(Integer.toString(i)).concat(".txt");
             byte[] messageBlock = readFile(temp);
             Element signature = generateSignature(messageBlock, privateKey, pairing);
             writeSignature(temp, signature);
         }
-
+        temp = filePath.concat(Integer.toString(numberOfFiles)).concat(".txt");
+        byte[] messageBlock = readFile(temp);
+        Element signature = generateSignature(messageBlock, privateKey, pairing);
+        writeSignature(temp, signature);
 
 
         //writeSignature(filePath, signature);
@@ -223,18 +267,24 @@ public class BLS {
         String PathName = "output\\".concat(saveName);
         InputStream is = new FileInputStream(file);
         byte[] temp = new byte[blockSize];
-        for (int i = 0; i < blockSize; i++) {
-            try {
+        try{
+            while (is.available() >= blockSize) {
+
                 is.read(temp);
                 OutputStream os = new FileOutputStream(PathName.concat(Integer.toString(numberOfFiles)).concat(".txt"));
                 numberOfFiles++;
                 os.write(temp);
-            } catch(Exception IOException){
-                IOException.printStackTrace();
-                return -1;
             }
+            byte[] temp2 = new byte[is.available()];
+            is.read(temp2);
+            OutputStream os = new FileOutputStream(PathName.concat(Integer.toString(numberOfFiles)).concat(".txt"));
+            os.write(temp);
+        } catch(Exception IOException){
+            IOException.printStackTrace();
+            return -1;
         }
-        return (numberOfFiles - 1);
+
+        return numberOfFiles;
     }
     /*// splits byte array into multiple blocks of size blockSize(bytes)
     public static byte[][] splitArray(byte[] file, int blockSize){
