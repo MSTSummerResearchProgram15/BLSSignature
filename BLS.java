@@ -21,7 +21,7 @@ import java.util.Arrays;
 
 public class BLS {
 
-    public static final int BLOCK_SIZE = 64;
+    public static final int BLOCK_SIZE = 128; // block size file splitter in bytes
     public static void main(String args[]){
 
         long startTime = System.currentTimeMillis();
@@ -31,38 +31,40 @@ public class BLS {
         Element privateKey = pairing.getZr().newRandomElement();        // secret/private key
         Element pK = g.powZn(privateKey);                               // public key
 
-
         File dir = new File("output");
         dir.mkdir();
 
-        String saveFile = "splitFile";
-        int numberOfFiles = 0;
-        try {
-            File path = path("message.txt");
-            System.out.println("number of files created:");
-            System.out.println(numberOfFiles = splitFile(path, BLOCK_SIZE, saveFile));
-        } catch(IOException ioe){
-            ioe.printStackTrace();
-        }
 
-        String folderPath = "output";
-        String originalName = saveFile;
+        FileSplitter fs = new FileSplitter("output");
+        int numberOfFiles = 0;
+        try{
+            numberOfFiles = fs.splitFile("message.txt", "splitFile", BLOCK_SIZE);
+        } catch (FileNotFoundException e){
+            e.printStackTrace();
+            System.exit(1);
+        }
+        System.out.println(numberOfFiles);
+        FileSigner signer = new FileSigner(pairing, privateKey);
         try {
-            signFiles(folderPath, originalName, numberOfFiles, privateKey, pairing);
+            signer.signFiles("output", "splitFile", numberOfFiles);
         } catch (IOException e){
             e.printStackTrace();
+            System.exit(2);
         }
+        FileSigner verifier = new FileSigner(pairing, pK, g);
         boolean success = false;
-        try{
-            success = verifyFiles(folderPath, originalName, numberOfFiles, g, pK, pairing);
-        }catch(IOException e){
+        try {
+            success = verifier.verifyFiles("output", "splitFile", numberOfFiles);
+        } catch (IOException e){
             e.printStackTrace();
+            System.exit(3);
         }
-        if(success){
-            System.out.println("successfully verified");
-        }else{
-            System.out.println("not verified");
+        if(success) {
+            System.out.println("verified");
+        } else{
+            System.out.println("fail");
         }
+
 
         System.out.println("\nms to run:");
         System.out.println(System.currentTimeMillis()-startTime);
@@ -102,6 +104,34 @@ public class BLS {
 
 
 
+        /*String saveFile = "splitFile";
+        int numberOfFiles = 0;
+        try {
+            File path = path("message.txt");
+            System.out.println("number of files created:");
+            System.out.println(numberOfFiles = splitFile(path, BLOCK_SIZE, saveFile));
+        } catch(IOException ioe){
+            ioe.printStackTrace();
+        }
+
+        String folderPath = "output";
+        String originalName = saveFile;
+        try {
+            signFiles(folderPath, originalName, numberOfFiles, privateKey, pairing);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+        boolean success = false;
+        try{
+            success = verifyFiles(folderPath, originalName, numberOfFiles, g, pK, pairing);
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+        if(success){
+            System.out.println("successfully verified");
+        }else{
+            System.out.println("not verified");
+        }*/
 
 /*
         // begin recovery testing
@@ -204,7 +234,7 @@ public class BLS {
         */
     }
 
-    // takes file name and number of files with that name(iterator concatenated) and verifies using .signature files in same directory
+    /*// takes file name and number of files with that name(iterator concatenated) and verifies using .signature files in same directory
     public static boolean verifyFiles(String folderPath, String originalFileName,
                                    int numberOfFiles, Element sysParams,
                                    Element publicKey, Pairing pairing )
@@ -286,7 +316,7 @@ public class BLS {
 
         return numberOfFiles;
     }
-    /*// splits byte array into multiple blocks of size blockSize(bytes)
+    // splits byte array into multiple blocks of size blockSize(bytes)
     public static byte[][] splitArray(byte[] file, int blockSize){
         int arrayLength = file.length/blockSize;
         if(file.length%blockSize != 0){
@@ -307,7 +337,7 @@ public class BLS {
             blockIterator++;
         }
         return blocks;
-    }*/
+    }
 
     // reads file into byte array, don't use for 'large' files
     public static byte[] readFile(String filePath) throws IOException{
@@ -347,5 +377,5 @@ public class BLS {
         MessageDigest md = new JDKMessageDigest.SHA256();
         hash = md.digest(value);
         return hash;
-    }
+    }*/
 }
