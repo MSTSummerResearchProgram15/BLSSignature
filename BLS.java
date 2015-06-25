@@ -24,7 +24,7 @@ public class BLS {
     public static final int BLOCK_SIZE = 128; // block size file splitter in bytes
     public static void main(String args[]){
 
-        long startTime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis(); // get start time (used to determine execution time)
         // setup pairing
         Pairing pairing = PairingFactory.getPairing("a.properties");    // curve parameters
         Element g = pairing.getG1().newRandomElement().getImmutable();  // system parameters
@@ -32,44 +32,44 @@ public class BLS {
         Element pK = g.powZn(privateKey);                               // public key
 
         File dir = new File("output");
-        dir.mkdir();
+        dir.mkdir();                        // creates folder 'output', so all of the new files are all in one spot
 
 
-        FileSplitter fs = new FileSplitter("output");
-        int numberOfFiles = 0;
+        FileSplitter fs = new FileSplitter("output");   // sets ouput folder
+        int numberOfFiles = 0;                          // initialize number of files counter
         try{
-            numberOfFiles = fs.splitFile("message.txt", "splitFile", BLOCK_SIZE);
+            numberOfFiles = fs.splitFile("message.txt", "splitFile", BLOCK_SIZE);   // splits original file into new files of size blocksize
         } catch (FileNotFoundException e){
             e.printStackTrace();
             System.exit(1);
         }
-        System.out.println(numberOfFiles);
-        FileSigner signer = new FileSigner(pairing, privateKey);
+        System.out.println(numberOfFiles);  // check how many files were created
+        FileSigner signer = new FileSigner(pairing, privateKey);    // initialize signer
         try {
-            signer.signFiles("output", "splitFile", numberOfFiles);
+            signer.signFiles("output", "splitFile", numberOfFiles);     // sign files
         } catch (IOException e){
             e.printStackTrace();
             System.exit(2);
         }
-        FileSigner verifier = new FileSigner(pairing, pK, g);
+        FileSigner verifier = new FileSigner(pairing, pK, g);       // initialize signer in 'verify mode'
         boolean success = false;
         try {
-            success = verifier.verifyFiles("output", "splitFile", numberOfFiles);
+            success = verifier.verifyFiles("output", "splitFile", numberOfFiles); // verify files
         } catch (IOException e){
             e.printStackTrace();
             System.exit(3);
         }
         if(success) {
-            System.out.println("verified");
+            System.out.println("verified");     // find out if it worked
         } else{
             System.out.println("fail");
         }
 
 
         System.out.println("\nms to run:");
-        System.out.println(System.currentTimeMillis()-startTime);
-        System.exit(0);
-
+        System.out.println(System.currentTimeMillis()-startTime);   // output execution time
+        System.exit(0); // end program
+        // old code past here
 
 
 

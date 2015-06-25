@@ -6,6 +6,8 @@ import java.security.MessageDigest;
 
 /**
  * Created by Dylan on 6/24/2015.
+ *
+ * Uses sha256 hash
  */
 public class Signer {
 
