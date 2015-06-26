@@ -25,12 +25,8 @@ public class BLS {
     public static void main(String args[]){
 
         long startTime = System.currentTimeMillis(); // get start time (used to determine execution time)
-        // setup pairing
-        Pairing pairing = PairingFactory.getPairing("a.properties");    // curve parameters
-        Element g = pairing.getG1().newRandomElement().getImmutable();  // system parameters
-        Element privateKey = pairing.getZr().newRandomElement();        // secret/private key
-        Element pK = g.powZn(privateKey);                               // public key
-
+        
+        BLSSignature bls = new BLSSignature("a.properties"); // generates curveParams, System params, and key pair using properties file
         File dir = new File("output");
         dir.mkdir();                        // creates folder 'output', so all of the new files are all in one spot
 
@@ -44,14 +40,14 @@ public class BLS {
             System.exit(1);
         }
         System.out.println(numberOfFiles);  // check how many files were created
-        FileSigner signer = new FileSigner(pairing, privateKey);    // initialize signer
+        FileSigner signer = new FileSigner(bls.getPairing(), bls.getPrivateKey());    // initialize signer
         try {
             signer.signFiles("output", "splitFile", numberOfFiles);     // sign files
         } catch (IOException e){
             e.printStackTrace();
             System.exit(2);
         }
-        FileSigner verifier = new FileSigner(pairing, pK, g);       // initialize signer in 'verify mode'
+        FileSigner verifier = new FileSigner(bls.getPairing(), bls.getPublicKey(), bls.getSysParams());       // initialize signer in 'verify mode'
         boolean success = false;
         try {
             success = verifier.verifyFiles("output", "splitFile", numberOfFiles); // verify files
